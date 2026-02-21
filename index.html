@@ -2,73 +2,131 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>KYC - Fila de Análise</title>
+    <title>KYC - Contas sem Documento</title>
     <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_modern.min.css" rel="stylesheet">
     <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.4/luxon.min.js"></script>
+
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f0f2f5; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        #search-input { padding: 10px; width: 300px; border: 1px solid #ccc; border-radius: 5px; }
-        .tabulator { border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .high-saldo { color: #d32f2f; font-weight: bold; }
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f4f7f9; color: #333; }
+        .header { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h2 { margin-top: 0; color: #1a73e8; }
+        
+        .filter-group { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px; align-items: center; }
+        .filter-section { border-left: 3px solid #1a73e8; padding-left: 10px; }
+        label { font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px; color: #666; }
+        
+        button { border: 1px solid #1a73e8; background: white; color: #1a73e8; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; transition: 0.2s; }
+        button:hover { background: #1a73e8; color: white; }
+        button.active { background: #1a73e8; color: white; font-weight: bold; }
+        
+        input[type="date"] { padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        #table-container { background: white; border-radius: 10px; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h2>🚀 KYC - Fila de Análise Prioritária</h2>
-    <input type="text" id="search-input" placeholder="🔍 Filtrar ID, Natureza ou Segmento...">
+    <h2>🚀 KYC - Contas sem Documento</h2>
+    
+    <div class="filter-group">
+        <div class="filter-section">
+            <label>FILTRAR POR SALDO</label>
+            <button onclick="filterSaldo(0)">Todos</button>
+            <button onclick="filterSaldo(5000)">> 5k</button>
+            <button onclick="filterSaldo(20000)">> 20k</button>
+            <button onclick="filterSaldo(50000)">> 50k</button>
+        </div>
+
+        <div class="filter-section">
+            <label>DATA DE ABERTURA</label>
+            <button onclick="filterData(15)">Últimos 15 dias</button>
+            <button onclick="filterData(20)">Últimos 20 dias</button>
+            <button onclick="filterData(30)">Últimos 30 dias</button>
+            <input type="date" id="date-picker" onchange="filterDataEspecifica(this.value)">
+        </div>
+        
+        <div class="filter-section">
+            <label>BUSCA GERAL</label>
+            <input type="text" id="search-input" placeholder="ID ou Natureza..." style="padding: 6px; border-radius: 4px; border: 1px solid #ccc;">
+            <button onclick="clearFilters()" style="border-color: #666; color: #666;">Limpar</button>
+        </div>
+    </div>
 </div>
 
 <div id="table-container"></div>
 
 <script>
-    // 1. Função para carregar o CSV que você vai subir no Git
-    // O nome do arquivo deve ser exatamente 'dados.csv'
+    var table;
+
     Papa.parse("dados.csv", {
         download: true,
         header: true,
-        dynamicTyping: true,
+        skipEmptyLines: true,
         complete: function(results) {
             renderTable(results.data);
         }
     });
 
     function renderTable(data) {
-        var table = new Tabulator("#table-container", {
+        table = new Tabulator("#table-container", {
             data: data,
             layout: "fitColumns",
             pagination: "local",
             paginationSize: 15,
-            placeholder: "Nenhum dado encontrado. Certifique-se de que o arquivo 'dados.csv' foi enviado.",
+            movableColumns: true,
             columns: [
-                {title: "ID Cliente", field: "customer_id", sorter: "number", width: 120},
-                {title: "Natureza", field: "natureza_juridica", width: 150},
-                {title: "Segmento", field: "segmento_commercial", width: 150},
-                {title: "Saldo", field: "saldo", formatter: "money", formatterParams:{
+                {title: "ID Cliente", field: "customer_id", width: 120},
+                {title: "Abertura", field: "data_criacao", width: 150, formatter: function(cell){
+                    return luxon.DateTime.fromISO(cell.getValue()).toFormat('dd/MM/yyyy');
+                }},
+                {title: "Natureza", field: "natureza_juridica"},
+                {title: "Saldo", field: "saldo", hozAlign: "right", formatter: "money", formatterParams: {
                     decimal: ",", thousands: ".", symbol: "R$ "
-                }, hozAlign: "right", bottomCalc: "sum", width: 150},
+                }, bottomCalc: "sum", bottomCalcFormatter: "money", bottomCalcFormatterParams: {
+                    decimal: ",", thousands: ".", symbol: "Total: R$ "
+                }},
                 {title: "Ações", field: "link_cliente", formatter: "link", formatterParams: {
-                    label: "Abrir Cliente 🔗",
-                    target: "_blank",
-                }, hozAlign: "center"},
+                    label: "Abrir Cliente 🔗", target: "_blank",
+                }},
                 {title: "Doc Análise", field: "link_analise_documento", formatter: "link", formatterParams: {
-                    label: "Ver Docs 📄",
-                    target: "_blank",
-                }, hozAlign: "center"},
+                    label: "Ver Docs 📄", target: "_blank",
+                }},
             ],
         });
 
-        // Filtro de Busca Global
+        // Busca Geral
         document.getElementById("search-input").addEventListener("keyup", function(e){
-            table.setFilter([
-                [{field: "customer_id", type: "like", value: e.target.value},
-                 {field: "natureza_juridica", type: "like", value: e.target.value},
-                 {field: "segmento_commercial", type: "like", value: e.target.value}]
-            ]);
+            table.setFilter("customer_id", "like", e.target.value);
         });
+    }
+
+    // Lógica de Filtro de Saldo
+    function filterSaldo(min) {
+        table.clearFilter();
+        if(min > 0) {
+            table.addFilter("saldo", ">", min);
+        }
+    }
+
+    // Lógica de Filtro de Data (Retroativo)
+    function filterData(dias) {
+        table.clearFilter();
+        var dataLimite = luxon.DateTime.now().minus({days: dias}).toISODate();
+        table.addFilter("data_criacao", ">=", dataLimite);
+    }
+
+    // Filtro Calendário
+    function filterDataEspecifica(valor) {
+        table.clearFilter();
+        table.addFilter("data_criacao", "=", valor);
+    }
+
+    function clearFilters() {
+        table.clearFilter();
+        document.getElementById("date-picker").value = "";
+        document.getElementById("search-input").value = "";
     }
 </script>
 </body>
