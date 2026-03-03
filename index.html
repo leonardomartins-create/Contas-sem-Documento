@@ -25,10 +25,9 @@
 
         body { font-family: 'Montserrat', sans-serif; background-color: var(--cinza-bg); margin: 0; color: var(--azul-escuro); }
         .navbar { background: white; padding: 15px 40px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .navbar img { height: 30px; }
+        .navbar img { height: 35px; width: auto; } /* Ajuste do Logo */
         .container { padding: 30px 40px; }
         
-        /* Layout dos Filtros */
         .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .filter-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e0e6ed; }
         .filter-card label { display: block; font-weight: 700; font-size: 11px; text-transform: uppercase; margin-bottom: 15px; color: var(--azul-claro); }
@@ -39,8 +38,7 @@
         
         input { width: 100%; padding: 10px; border: 1px solid #e0e6ed; border-radius: 6px; font-family: 'Montserrat'; box-sizing: border-box; }
 
-        /* Estilo da Tabela */
-        .tabulator { border: none !important; }
+        .tabulator { border: none !important; background-color: transparent !important; }
         .tabulator-header { background: transparent !important; color: var(--azul-claro) !important; font-weight: 700 !important; font-size: 11px; text-transform: uppercase; }
         .tabulator-row { background: white !important; margin-bottom: 5px !important; border-radius: 8px !important; border: 1px solid #e0e6ed !important; }
         
@@ -51,7 +49,7 @@
 <body>
 
 <div class="navbar">
-    <img src="https://www.asaas.com/assets/logo-asaas.svg" alt="Asaas">
+    <img src="logo-asaas-azul.png" alt="Asaas Logo" onerror="this.src='https://www.asaas.com/assets/logo-asaas.svg'">
     <div style="font-size: 12px; font-weight: 600; color: var(--azul-claro);">ANALISE & PREVENÇÃO</div>
 </div>
 
@@ -60,7 +58,7 @@
 
     <div class="filter-grid">
         <div class="filter-card">
-            <label>Faixa de Saldo</label>
+            <label><i class="fa-solid fa-wallet"></i> Faixa de Saldo</label>
             <div class="btn-group">
                 <button class="btn-saldo active" onclick="filterSaldo(0, this)">Todos</button>
                 <button class="btn-saldo" onclick="filterSaldo(5000, this)">> 5k</button>
@@ -70,7 +68,7 @@
         </div>
 
         <div class="filter-card">
-            <label>Período de Abertura</label>
+            <label><i class="fa-solid fa-calendar-days"></i> Período de Abertura</label>
             <div class="btn-group" style="margin-bottom: 10px;">
                 <button class="btn-data" onclick="filterData(15, this)">15d</button>
                 <button class="btn-data" onclick="filterData(20, this)">20d</button>
@@ -80,7 +78,7 @@
         </div>
 
         <div class="filter-card">
-            <label>Busca Rápida</label>
+            <label><i class="fa-solid fa-magnifying-glass"></i> Busca Rápida</label>
             <input type="text" id="search-input" placeholder="Digite o ID do cliente...">
             <button onclick="clearFilters()" style="margin-top:10px; width:100%; border-style: dashed;">Limpar Tudo</button>
         </div>
@@ -113,20 +111,20 @@
                 {title: "Abertura", field: "data_cadastro", width: 130, formatter: function(cell){
                     var val = cell.getValue();
                     if(!val) return "";
-                    // Tenta ler o formato brasileiro dd/mm/yyyy que está na sua planilha
-                    var date = luxon.DateTime.fromFormat(val, "dd/MM/yyyy");
+                    // Correção: Lendo o formato dd/MM/yyyy direto da coluna data_cadastro
+                    var date = luxon.DateTime.fromFormat(val.split(' ')[0], "dd/MM/yyyy");
                     return date.isValid ? date.toFormat('dd/MM/yyyy') : val;
                 }},
                 {title: "Natureza", field: "tipo_empresa", width: 150},
-                {title: "Saldo", field: "saldo", hozAlign: "right", formatter: function(cell){
+                {title: "Saldo", field: "saldo", hozAlign: "right", fontWeight: "700", formatter: function(cell){
                     var val = cell.getValue();
                     if(!val) return "R$ 0,00";
                     
-                    // Converte para número limpando qualquer resquício de texto
+                    // Limpeza de string para garantir que vire número
                     var num = parseFloat(String(val).replace(/[^\d.-]/g, ''));
                     var formatted = "R$ " + num.toLocaleString('pt-BR', {minimumFractionDigits: 2});
                     
-                    // REGRA: Destaque Rosa para Saldo > 50.000
+                    // Regra de destaque Rosa para Saldo > 50.000
                     return num > 50000 ? `<span class="high-balance">${formatted}</span>` : formatted;
                 }},
                 {title: "Perfil Asaas", field: "link_customer", hozAlign: "center", formatter: function(cell){
@@ -143,6 +141,7 @@
         });
     }
 
+    // Filtros de Saldo
     function filterSaldo(min, btn) {
         document.querySelectorAll(".btn-saldo").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
@@ -150,28 +149,31 @@
         if(min > 0) table.addFilter("saldo", ">", min);
     }
 
+    // Filtro de Data (Últimos X dias)
     function filterData(dias, btn) {
         document.querySelectorAll(".btn-data").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         table.clearFilter();
-        // Lógica de filtro simplificada para datas no formato string
         var limite = luxon.DateTime.now().minus({days: dias});
         table.setFilter(function(data){
-            var d = luxon.DateTime.fromFormat(data.data_cadastro, "dd/MM/yyyy");
+            var d = luxon.DateTime.fromFormat(data.data_cadastro.split(' ')[0], "dd/MM/yyyy");
             return d >= limite;
         });
     }
 
+    // Selecionar data específica
     function filterDataEspecifica(valor) {
         if(!valor) return;
+        table.clearFilter();
         var dataFormatada = luxon.DateTime.fromISO(valor).toFormat("dd/MM/yyyy");
-        table.setFilter("data_cadastro", "=", dataFormatada);
+        table.setFilter("data_cadastro", "like", dataFormatada);
     }
 
     function clearFilters() {
         table.clearFilter();
         document.querySelectorAll("button").forEach(b => b.classList.remove("active"));
         document.querySelector(".btn-saldo").classList.add("active");
+        document.getElementById("date-picker").value = "";
         document.getElementById("search-input").value = "";
     }
 </script>
