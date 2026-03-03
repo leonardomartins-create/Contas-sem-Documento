@@ -215,4 +215,42 @@
         });
 
         document.getElementById("search-input").addEventListener("keyup", function(e){
-            table.setFilter("customer_id", "like", e.target.value
+            table.setFilter("customer_id", "like", e.target.value);
+        });
+    }
+
+    function filterSaldo(min, btn) {
+        resetBtnStyles(".btn-saldo");
+        btn.classList.add("active");
+        table.clearFilter();
+        if(min > 0) table.addFilter("saldo", ">", min);
+    }
+
+    function filterData(dias, btn) {
+        resetBtnStyles(".btn-data");
+        btn.classList.add("active");
+        table.clearFilter();
+        var dataLimite = luxon.DateTime.now().minus({days: dias}).toISODate();
+        table.addFilter("data_criacao", ">=", dataLimite);
+    }
+
+    function filterDataEspecifica(valor) {
+        resetBtnStyles(".btn-data");
+        table.clearFilter();
+        table.addFilter("data_criacao", "like", valor);
+    }
+
+    function resetBtnStyles(selector) {
+        document.querySelectorAll(selector).forEach(b => b.classList.remove("active"));
+    }
+
+    function clearFilters() {
+        table.clearFilter();
+        resetBtnStyles("button");
+        document.querySelector(".btn-saldo").classList.add("active");
+        document.getElementById("date-picker").value = "";
+        document.getElementById("search-input").value = "";
+    }
+</script>
+</body>
+</html>
