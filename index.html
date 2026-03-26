@@ -22,10 +22,9 @@
         .btn-group { display: flex; flex-wrap: wrap; gap: 8px; }
         button { border: 1px solid #e0e6ed; background: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-family: 'Montserrat'; font-size: 11px; font-weight: 600; }
         button.active { background: var(--azul-asaas); color: white; border-color: var(--azul-asaas); }
-        input { width: 100%; padding: 10px; border: 1px solid #e0e6ed; border-radius: 6px; font-family: 'Montserrat'; box-sizing: border-box; }
         .tabulator { border: none !important; background-color: transparent !important; }
         .tabulator-header { background: transparent !important; color: var(--azul-claro) !important; font-weight: 700 !important; font-size: 11px; text-transform: uppercase; }
-        .tabulator-row { background: white !important; margin-bottom: 5px !important; border-radius: 8px !important; border: 1px solid #e0e6ed !important; min-height: 45px !important; }
+        .tabulator-row { background: white !important; margin-bottom: 5px !important; border-radius: 8px !important; border: 1px solid #e0e6ed !important; }
         .link-btn { text-decoration: none; color: var(--azul-asaas); font-weight: 700; font-size: 11px; }
         .high-balance { color: var(--rosa-asaas) !important; font-weight: 800 !important; }
     </style>
@@ -49,7 +48,7 @@
         </div>
         <div class="filter-card">
             <label><i class="fa-solid fa-magnifying-glass"></i> Busca Rápida</label>
-            <input type="text" id="search-input" placeholder="ID do cliente...">
+            <input type="text" id="search-input" style="width:100%; padding:10px; border-radius:6px; border:1px solid #e0e6ed;" placeholder="ID do cliente...">
         </div>
     </div>
     <div id="table-container"></div>
@@ -71,7 +70,7 @@
                 {title: "ABERTURA", field: "data_criacao", width: 150, formatter: function(cell){
                     var val = cell.getValue();
                     if(!val) return "";
-                    // O Metabase envia ISO (2026-02-04...), Luxon trata isso direto
+                    // Ajuste para ler o timestamp do Metabase corretamente
                     var date = luxon.DateTime.fromISO(val.split('.')[0]); 
                     return date.isValid ? date.toFormat('dd/MM/yyyy HH:mm') : val;
                 }},
@@ -79,15 +78,21 @@
                 {title: "SALDO", field: "saldo", hozAlign: "right", formatter: function(cell){
                     var val = cell.getValue();
                     if(!val) return "R$ 0,00";
+                    // Limpa caracteres especiais para converter em número
                     var num = parseFloat(String(val).replace(/[^\d.-]/g, ''));
                     var formatted = "R$ " + num.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                    // Destaque em rosa para saldos acima de 50k
                     return num > 50000 ? `<span class="high-balance">${formatted}</span>` : formatted;
                 }},
                 {title: "PERFIL", field: "link_customer", hozAlign: "center", formatter: function(cell){
                     return `<a href="${cell.getValue()}" target="_blank" class="link-btn"><i class="fa-solid fa-user-gear"></i> ABRIR</a>`;
                 }},
+                {title: "DOCS", field: "link_customer", hozAlign: "center", formatter: function(cell){
+                    return `<a href="${cell.getValue()}" target="_blank" class="link-btn" style="color:#8ebf30"><i class="fa-solid fa-file-shield"></i> DOCUMENTOS</a>`;
+                }},
             ],
         });
+
         document.getElementById("search-input").addEventListener("keyup", function(e){
             table.setFilter("customer_id", "like", e.target.value);
         });
