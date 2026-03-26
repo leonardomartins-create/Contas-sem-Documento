@@ -1,0 +1,28 @@
+name: Atualização Diária da Base KYC
+
+on:
+  schedule:
+    # Roda todo dia às 08:00 (Horário de Brasília)
+    - cron: '0 11 * * *' 
+  workflow_dispatch: # Permite que você rode manualmente quando quiser
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v3
+
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Instalar dependências
+        run: pip install requests PyGithub
+
+      - name: Rodar Script de Atualização
+        env:
+          METABASE_SESSION: ${{ secrets.METABASE_SESSION }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: python atualizador.py
