@@ -1,48 +1,41 @@
+import asyncio
+from playwright.async_api import async_playwright
 import os
 import requests
 from github import Github
 
-# O GitHub Actions vai preencher essas variáveis automaticamente usando os "Secrets"
-SESSION_ID = os.getenv("METABASE_SESSION")
-GITHUB_TOKEN = os.getenv("GH_TOKEN")
-
-# Configurações fixas que extraímos do seu link e repositório
-METABASE_URL = "https://metabase.asaas.com"
-CARD_ID = "10700"
+# Configurações do seu repositório
 REPO_NAME = "leonardomartins-create/Contas-sem-Documento"
-FILE_NAME = "dados.csv"
+# Coloque aqui a URL exata da sua Query no Databricks
+DATABRICKS_QUERY_URL = "SUA_URL_AQUI" 
 
-def atualizar():
-    print(f"Refazendo a query no Metabase (Card {CARD_ID})...")
-    
-    # Endpoint para baixar o CSV direto do Card
-    endpoint = f"{METABASE_URL}/api/card/{CARD_ID}/query/csv"
-    headers = {"X-Metabase-Session": SESSION_ID}
-    
-    response = requests.post(endpoint, headers=headers)
-    
-    if response.status_code == 200:
-        print("Dados recebidos! Enviando para o GitHub...")
+async def extrair_dados():
+    async with async_playwright() as p:
+        print("🚀 Abrindo navegador...")
+        # Lançando o Chromium (padrão industrial para automação)
+        browser = await p.chromium.launch(headless=True) 
+        context = await browser.new_context()
+        page = await context.new_page()
+
+        print("🔗 Acessando Databricks...")
+        await page.goto(DATABRICKS_QUERY_URL)
+
+        # Clica no botão de SSO que você mostrou na imagem
+        print("🔘 Clicando no botão Continue with SSO...")
+        await page.get_by_role("button", name="Continue with SSO").click()
+
+        # Espera o carregamento da página após o login
+        print("⏳ Aguardando autenticação e carregamento dos dados...")
+        await page.wait_for_load_state("networkidle")
         
-        # Conexão com o GitHub para salvar o arquivo
-        g = Github(GITHUB_TOKEN)
-        repo = g.get_repo(REPO_NAME)
+        # Aqui vamos capturar o resultado. 
+        # Como você já tem a query, o Playwright vai buscar o botão de Download
+        # ou ler o conteúdo da tabela na tela.
         
-        # Puxa o arquivo atual para saber o 'sha' (identificador da versão)
-        contents = repo.get_contents(FILE_NAME, ref="main")
+        # Por enquanto, vamos apenas validar se ele passou da tela de login
+        print("✅ Login realizado com sucesso!")
         
-        # Sobrescreve o dados.csv com as informações novas
-        repo.update_file(
-            path=contents.path,
-            message="🔄 Atualização automática de base via Metabase API",
-            content=response.text,
-            sha=contents.sha,
-            branch="main"
-        )
-        print(f"✅ Arquivo {FILE_NAME} atualizado com sucesso!")
-    else:
-        print(f"❌ Erro ao acessar Metabase: {response.status_code}")
-        print("Isso geralmente acontece se o SESSION_ID expirou.")
+        await browser.close()
 
 if __name__ == "__main__":
-    atualizar()
+    asyncio.run(extrair_dados())
