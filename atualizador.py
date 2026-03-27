@@ -1,66 +1,64 @@
 import asyncio
 from playwright.async_api import async_playwright
 import os
-import requests
 from github import Github
 
-# Configurações extraídas da sua URL
-DATABRICKS_URL = "https://dbc-53bd5b4a-ac3c.cloud.databricks.com/editor/queries/3841745429257799?o=1323332079465250"
-REPO_NAME = "leonardomartins-create/Contas-sem-Documento"
+# URL da sua Query que vimos no vídeo
+URL_DATABRICKS = "https://dbc-53bd5b4a-ac3c.cloud.databricks.com/editor/queries/3841745429257799?o=1323332079465250"
 
-async def extrair_dados():
+async def executar_automacao():
     async with async_playwright() as p:
-        print("🚀 Abrindo navegador...")
+        print("🎬 Iniciando navegador...")
         browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context(viewport={'width': 1920, 'height': 1080})
+        context = await browser.new_context(viewport={'width': 1366, 'height': 768})
         page = await context.new_page()
 
-        print("🔗 Acessando Query no Databricks...")
-        await page.goto(DATABRICKS_URL)
-
-        # 1. Login SSO
-        print("🔘 Clicando no SSO...")
-        await page.get_by_role("button", name="Continue with SSO").click()
+        # 1. Acesso e Login SSO
+        print("🔗 Acessando Databricks...")
+        await page.goto(URL_DATABRICKS)
         
-        # Espera o editor carregar
-        await page.wait_for_selector("text=Run", timeout=60000)
+        # Clica no botão de SSO (baseado na sua primeira imagem)
+        try:
+            await page.click('text="Continue with SSO"', timeout=10000)
+            print("🔘 SSO clicado.")
+        except:
+            print("⚠️ Botão SSO não apareceu, tentando seguir...")
 
-        # 2. Executar a Query
-        print("⚡ Executando Query...")
-        await page.click("text=Run")
+        # 2. Espera o carregamento da Query
+        await page.wait_for_selector('button:has-text("Run")', timeout=60000)
+        print("⚡ Editor carregado. Rodando query...")
+        await page.click('button:has-text("Run")')
+
+        # 3. Processo de Download (Exatamente como no vídeo)
+        print("⏳ Aguardando resultados para download...")
+        # Espera o ícone de download (a setinha para baixo)
+        await page.wait_for_selector('button[aria-label="Download"]', timeout=120000)
         
-        # Espera o processamento (bolinha de carregamento sumir)
-        print("⏳ Aguardando resultados...")
-        await page.wait_for_selector("text=Export", timeout=120000) # Espera o botão de exportar aparecer
-
-        # 3. Download do CSV
-        print("📥 Iniciando download do CSV...")
         async with page.expect_download() as download_info:
-            # Clica no botão de exportar/download
-            await page.click("text=Export") 
-            # Se abrir um menu, clicamos em CSV. Se for direto, o Playwright captura.
-            try:
-                await page.click("text=CSV", timeout=5000)
-            except:
-                pass 
-                
+            print("🖱️ Clicando em Download -> All rows...")
+            await page.click('button[aria-label="Download"]')
+            # No vídeo, você clica em "Download CSV" -> "All rows"
+            await page.click('text="Download CSV"')
+            await page.click('text="All rows"')
+
         download = await download_info.value
-        csv_path = "dados.csv"
-        await download.save_as(csv_path)
-        print(f"✅ Arquivo baixado: {csv_path}")
+        path = "dados.csv"
+        await download.save_as(path)
+        print(f"✅ Arquivo baixado com sucesso: {path}")
 
         # 4. Enviar para o GitHub
-        print("⬆️ Subindo para o GitHub...")
-        with open(csv_path, "r", encoding="utf-8") as f:
-            content = f.read()
-            
+        print("⬆️ Atualizando o GitHub...")
         g = Github(os.getenv("GH_TOKEN"))
-        repo = g.get_repo(REPO_NAME)
+        repo = g.get_repo("leonardomartins-create/Contas-sem-Documento")
+        
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+
         file = repo.get_contents("dados.csv")
-        repo.update_file(file.path, "🔄 Sync Automático Databricks", content, file.sha)
+        repo.update_file(file.path, "🔄 Update via Databricks Automático", content, file.sha)
         
         await browser.close()
-        print("🎉 Missão cumprida!")
+        print("🎉 Tudo pronto! Dash atualizada.")
 
 if __name__ == "__main__":
-    asyncio.run(extrair_dados())
+    asyncio.run(executar_automacao())
