@@ -28,15 +28,13 @@
         .navbar img { height: 35px; width: auto; display: block; }
         .container { padding: 30px 40px; }
         .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .filter-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e0e6ed; display: flex; flex-direction: column; justify-content: space-between; }
+        .filter-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e0e6ed; }
         .filter-card label { display: block; font-weight: 700; font-size: 11px; text-transform: uppercase; margin-bottom: 12px; color: var(--azul-claro); }
         .btn-group { display: flex; flex-wrap: wrap; gap: 6px; }
         button { border: 1px solid #e0e6ed; background: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-family: 'Montserrat'; font-size: 11px; font-weight: 600; transition: 0.2s; }
         button.active { background: var(--azul-asaas); color: white; border-color: var(--azul-asaas); }
         input { width: 100%; padding: 8px; border: 1px solid #e0e6ed; border-radius: 6px; font-family: 'Montserrat'; font-size: 12px; box-sizing: border-box; }
         .date-inputs { display: flex; gap: 10px; align-items: center; }
-        .tabulator { border: none !important; background-color: transparent !important; }
-        .tabulator-header { background: transparent !important; color: var(--azul-claro) !important; font-weight: 700 !important; font-size: 11px; text-transform: uppercase; }
         .tabulator-row { background: white !important; margin-bottom: 5px !important; border-radius: 8px !important; border: 1px solid #e0e6ed !important; }
         .link-btn { text-decoration: none; color: var(--azul-asaas); font-weight: 700; font-size: 11px; }
         .high-balance { color: var(--rosa-asaas) !important; font-weight: 800 !important; }
@@ -45,7 +43,7 @@
 <body>
 
 <div class="navbar">
-    <img src="logo-asaas-azul.png" alt="Asaas Logo">
+    <img src="https://www.asaas.com/assets/logo-asaas-azul.png" alt="Asaas Logo">
     <div style="font-size: 12px; font-weight: 600; color: var(--azul-claro);">ANALISE & PREVENÇÃO</div>
 </div>
 
@@ -64,10 +62,10 @@
         </div>
 
         <div class="filter-card">
-            <label><i class="fa-solid fa-calendar-days"></i> Período de Abertura (Intervalo)</label>
+            <label><i class="fa-solid fa-calendar-days"></i> Período de Abertura</label>
             <div class="date-inputs">
                 <input type="date" id="date-from" onchange="updateFilters('data')">
-                <span style="font-size: 10px; font-weight: bold;">ATÉ</span>
+                <span>ATÉ</span>
                 <input type="date" id="date-to" onchange="updateFilters('data')">
             </div>
         </div>
@@ -93,7 +91,18 @@
         header: true,
         skipEmptyLines: true,
         complete: function(results) {
-            renderTable(results.data);
+            // Processa os dados para garantir formatos compatíveis
+            const processedData = results.data.map(row => {
+                // Extrai o ID do final da URL (ex: .../show/6143177 -> 6143177)
+                const idMatch = row.link_customer ? row.link_customer.match(/show\/(\d+)/) : null;
+                return {
+                    ...row,
+                    extracted_id: idMatch ? idMatch[1] : "N/A",
+                    // Converte DD/MM/AAAA para objeto Luxon para ordenação e filtro
+                    luxon_date: luxon.DateTime.fromFormat(row.data_criacao, "dd/MM/yyyy")
+                };
+            });
+            renderTable(processedData);
         }
     });
 
@@ -104,15 +113,10 @@
             height: "600px",
             pagination: "local",
             paginationSize: 50,
-            initialSort:[{column:"data_criacao", dir:"desc"}],
+            initialSort:[{column:"luxon_date", dir:"desc"}],
             columns: [
-                {title: "ID CLIENTE", field: "customer_id", width: 140, fontWeight: "bold"},
-                {title: "ABERTURA", field: "data_criacao", width: 160, formatter: function(cell){
-                    var val = cell.getValue();
-                    if(!val) return "";
-                    var date = luxon.DateTime.fromISO(val);
-                    return date.isValid ? date.toFormat('dd/MM/yyyy') : val;
-                }},
+                {title: "ID CLIENTE", field: "extracted_id", width: 140, fontWeight: "bold"},
+                {title: "ABERTURA", field: "data_criacao", width: 160},
                 {title: "NATUREZA", field: "natureza_juridica", width: 150},
                 {title: "SALDO", field: "saldo", hozAlign: "right", fontWeight: "700", formatter: function(cell){
                     var val = cell.getValue();
@@ -120,21 +124,20 @@
                     var formatted = "R$ " + num.toLocaleString('pt-BR', {minimumFractionDigits: 2});
                     return num >= 50000 ? `<span class="high-balance">${formatted}</span>` : formatted;
                 }},
-                {title: "PERFIL", field: "link_customer", hozAlign: "center", width: 100, formatter: function(cell){
-                    return `<a href="${cell.getValue()}" target="_blank" class="link-btn"><i class="fa-solid fa-user-gear"></i> ABRIR</a>`;
-                }},
-                {title: "DOCS", field: "link_customer", hozAlign: "center", width: 100, formatter: function(cell){
-                    return `<a href="${cell.getValue()}" target="_blank" class="link-btn" style="color: var(--verde-asaas)"><i class="fa-solid fa-file-shield"></i> DOCS</a>`;
+                {title: "AÇÕES", field: "link_customer", hozAlign: "center", formatter: function(cell){
+                    return `
+                        <a href="${cell.getValue()}" target="_blank" class="link-btn" style="margin-right:10px"><i class="fa-solid fa-user-gear"></i> PERFIL</a>
+                        <a href="${cell.getValue()}" target="_blank" class="link-btn" style="color: var(--verde-asaas)"><i class="fa-solid fa-file-shield"></i> DOCS</a>
+                    `;
                 }},
             ],
         });
 
         document.getElementById("search-input").addEventListener("keyup", function(e){
-            updateFilters('search', e.target.value);
+            updateFilters('search');
         });
     }
 
-    // Função mestre que aplica todos os filtros juntos
     function updateFilters(type, value, btn) {
         if (type === 'saldo') {
             currentMinSaldo = value;
@@ -148,12 +151,8 @@
 
         table.clearFilter();
 
-        // 1. Filtro de ID
-        if(searchTerm) {
-            table.addFilter("customer_id", "like", searchTerm);
-        }
+        if(searchTerm) table.addFilter("extracted_id", "like", searchTerm);
 
-        // 2. Filtro de Saldo
         if(currentMinSaldo > 0) {
             table.addFilter(function(data){
                 var num = parseFloat(String(data.saldo).replace(/[^\d.-]/g, '')) || 0;
@@ -161,17 +160,14 @@
             });
         }
 
-        // 3. Filtro de Data (Intervalo De/Até)
         if(dateFrom || dateTo) {
             table.addFilter(function(data){
-                if(!data.data_criacao) return false;
-                var d = luxon.DateTime.fromISO(data.data_criacao);
+                if(!data.luxon_date.isValid) return false;
                 var start = dateFrom ? luxon.DateTime.fromISO(dateFrom) : null;
                 var end = dateTo ? luxon.DateTime.fromISO(dateTo) : null;
-
-                if(start && end) return d >= start && d <= end;
-                if(start) return d >= start;
-                if(end) return d <= end;
+                if(start && end) return data.luxon_date >= start && data.luxon_date <= end;
+                if(start) return data.luxon_date >= start;
+                if(end) return data.luxon_date <= end;
                 return true;
             });
         }
