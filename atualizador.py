@@ -3,52 +3,57 @@ from playwright.async_api import async_playwright
 import os
 from github import Github
 
+# Sua URL do Databricks
 URL_DATABRICKS = "https://dbc-53bd5b4a-ac3c.cloud.databricks.com/editor/queries/3841745429257799?o=1323332079465250"
 
 async def executar_automacao():
     async with async_playwright() as p:
         print("🎬 Iniciando navegador...")
         browser = await p.chromium.launch(headless=True)
-        # Forçamos um tamanho de tela padrão para os botões aparecerem no mesmo lugar
+        # Contexto com resolução alta para garantir que os menus apareçam
         context = await browser.new_context(viewport={'width': 1920, 'height': 1080})
         page = await context.new_page()
 
         try:
             print("🔗 Acessando Databricks...")
-            await page.goto(URL_DATABRICKS, wait_until="networkidle")
+            await page.goto(URL_DATABRICKS, wait_until="domcontentloaded")
 
-            # 1. Clique no SSO (Baseado na imagem do botão azul)
-            print("🔘 Procurando botão de SSO...")
-            sso_button = page.get_by_role("button", name="Continue with SSO")
-            if await sso_button.is_visible():
-                await sso_button.click()
-                print("✅ SSO clicado.")
-            
-            # 2. Esperar o editor e clicar em Run
-            print("⚡ Aguardando o botão 'Run'...")
+            # 1. Clique no SSO (Tentativa por texto e por papel de botão)
+            print("🔘 Verificando login SSO...")
+            try:
+                # Espera curta para ver se a tela de login aparece
+                sso_btn = page.locator('button:has-text("Continue with SSO")')
+                await sso_btn.wait_for(state="visible", timeout=15000)
+                await sso_btn.click()
+                print("✅ Botão SSO clicado.")
+            except:
+                print("ℹ️ Tela de SSO não detectada ou já logado.")
+
+            # 2. Esperar o editor SQL carregar completamente
+            print("⚡ Aguardando carregamento da Query...")
+            # Esperamos o botão 'Run' ou a barra lateral
             await page.wait_for_selector('button:has-text("Run")', timeout=60000)
-            await page.click('button:has-text("Run")')
-            print("✅ Query em execução...")
-
-            # 3. Download (Simulando o fluxo do vídeo)
-            print("📥 Aguardando liberação do download...")
-            # Procuramos o botão de download pelo ícone (setinha) ou texto
-            btn_download = page.locator('button[aria-label="Download"]')
-            await btn_download.wait_for(state="visible", timeout=120000)
+            
+            # 3. Executar e Baixar (Lógica baseada no seu vídeo)
+            print("📥 Localizando botão de download...")
+            # No vídeo, o download fica próximo aos resultados
+            btn_download = page.locator('button[aria-label="Download"], .sql-editor-results-download-button').first
+            await btn_download.wait_for(state="visible", timeout=60000)
             
             async with page.expect_download() as download_info:
                 await btn_download.click()
-                print("🖱️ Menu de download aberto...")
+                print("🖱️ Abrindo menu de exportação...")
+                # Tenta clicar em CSV e depois em All Rows como no vídeo
                 await page.get_by_text("Download CSV").click()
                 await page.get_by_text("All rows").click()
 
             download = await download_info.value
             path = "dados.csv"
             await download.save_as(path)
-            print(f"✅ Arquivo salvo: {path}")
+            print(f"✅ Download concluído: {path}")
 
-            # 4. Upload para o GitHub
-            print("⬆️ Enviando para o GitHub...")
+            # 4. Enviar ao GitHub
+            print("⬆️ Atualizando repositório...")
             g = Github(os.getenv("GH_TOKEN"))
             repo = g.get_repo("leonardomartins-create/Contas-sem-Documento")
             file = repo.get_contents("dados.csv")
@@ -56,13 +61,13 @@ async def executar_automacao():
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
             
-            repo.update_file(file.path, "🔄 Update Automático Databricks", content, file.sha)
-            print("🎉 Processo finalizado com sucesso!")
+            repo.update_file(file.path, "🔄 Sync Automático Databricks", content, file.sha)
+            print("🎉 Missão cumprida!")
 
         except Exception as e:
-            print(f"❌ Erro durante a execução: {e}")
-            # Tira um print do erro para ajudar no diagnóstico
-            await page.screenshot(path="erro_debug.png")
+            print(f"❌ ERRO DETALHADO: {str(e)}")
+            # Captura de tela para debug se falhar
+            await page.screenshot(path="erro_login.png")
             raise e
         finally:
             await browser.close()
