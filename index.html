@@ -154,3 +154,38 @@
         }
 
         // 2. Filtro de Saldo
+        if(currentMinSaldo > 0) {
+            table.addFilter(function(data){
+                var num = parseFloat(String(data.saldo).replace(/[^\d.-]/g, '')) || 0;
+                return num >= currentMinSaldo;
+            });
+        }
+
+        // 3. Filtro de Data (Intervalo De/Até)
+        if(dateFrom || dateTo) {
+            table.addFilter(function(data){
+                if(!data.data_criacao) return false;
+                var d = luxon.DateTime.fromISO(data.data_criacao);
+                var start = dateFrom ? luxon.DateTime.fromISO(dateFrom) : null;
+                var end = dateTo ? luxon.DateTime.fromISO(dateTo) : null;
+
+                if(start && end) return d >= start && d <= end;
+                if(start) return d >= start;
+                if(end) return d <= end;
+                return true;
+            });
+        }
+    }
+
+    function clearFilters() {
+        currentMinSaldo = 0;
+        document.getElementById("search-input").value = "";
+        document.getElementById("date-from").value = "";
+        document.getElementById("date-to").value = "";
+        document.querySelectorAll(".btn-saldo").forEach(b => b.classList.remove("active"));
+        document.querySelector(".btn-saldo").classList.add("active");
+        table.clearFilter();
+    }
+</script>
+</body>
+</html>
