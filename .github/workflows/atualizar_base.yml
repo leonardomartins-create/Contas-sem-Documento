@@ -2,9 +2,8 @@ name: Atualização Diária da Base KYC
 
 on:
   schedule:
-    # Roda todo dia às 08:00 (Horário de Brasília)
-    - cron: '0 11 * * *' 
-  workflow_dispatch: # Permite que você rode manualmente quando quiser
+    - cron: '0 11 * * *' # 08:00 Brasília
+  workflow_dispatch:
 
 jobs:
   build:
@@ -19,10 +18,11 @@ jobs:
           python-version: '3.9'
 
       - name: Instalar dependências
-        run: pip install requests PyGithub
+        run: |
+          pip install requests PyGithub playwright
+          python -m playwright install --with-deps chromium
 
       - name: Rodar Script de Atualização
         env:
-          METABASE_SESSION: ${{ secrets.METABASE_SESSION }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: python atualizador.py
