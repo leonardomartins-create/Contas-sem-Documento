@@ -85,7 +85,7 @@
 <script>
     var table;
 
-    Papa.parse("dados.csv", {
+    Papa.parse("https://raw.githubusercontent.com/leonardomartins-create/Contas-sem-Documento/main/dados.csv", {
         download: true,
         header: true,
         skipEmptyLines: true,
@@ -101,7 +101,6 @@
             height: "600px",
             pagination: "local",
             paginationSize: 50,
-            // ORDENAÇÃO: Agora configurada para entender o formato BR
             initialSort:[
                 {column:"data_criacao", dir:"desc"},
             ],
@@ -112,13 +111,8 @@
                     field: "data_criacao", 
                     width: 160,
                     sorter: "date",
-                    sorterParams: { format: "dd/MM/yyyy" }, // Corrige a ordem pelo ano
-                    formatter: function(cell){
-                        var val = cell.getValue();
-                        if(!val) return "";
-                        // Se já estiver em dd/mm/yyyy, apenas retorna o valor
-                        return val;
-                    }
+                    sorterParams: { format: "dd/MM/yyyy" },
+                    formatter: function(cell){ return cell.getValue(); }
                 },
                 {title: "NATUREZA", field: "natureza_juridica", width: 150},
                 {title: "SALDO", field: "saldo", hozAlign: "right", fontWeight: "700", formatter: function(cell){
@@ -128,12 +122,22 @@
                     var formatted = "R$ " + num.toLocaleString('pt-BR', {minimumFractionDigits: 2});
                     return num > 50000 ? `<span class="high-balance">${formatted}</span>` : formatted;
                 }},
-                {title: "PERFIL ASAAS", field: "link_customer", hozAlign: "center", formatter: function(cell){
-                    return `<a href="${cell.getValue()}" target="_blank" class="link-btn"><i class="fa-solid fa-user-gear"></i> ABRIR</a>`;
-                }},
-                {title: "ANÁLISE DOCS", field: "link_customer", hozAlign: "center", formatter: function(cell){
-                    return `<a href="${cell.getValue()}" target="_blank" class="link-btn" style="color: var(--verde-asaas)"><i class="fa-solid fa-file-shield"></i> DOCS</a>`;
-                }},
+                {
+                    title: "PERFIL ASAAS", 
+                    field: "link_customer", 
+                    hozAlign: "center", 
+                    formatter: function(cell){
+                        return `<a href="${cell.getValue()}" target="_blank" class="link-btn"><i class="fa-solid fa-user-gear"></i> PERFIL</a>`;
+                    }
+                },
+                {
+                    title: "ANÁLISE DOCS", 
+                    field: "link_documento", 
+                    hozAlign: "center", 
+                    formatter: function(cell){
+                        return `<a href="${cell.getValue()}" target="_blank" class="link-btn" style="color: var(--verde-asaas)"><i class="fa-solid fa-file-shield"></i> DOCS</a>`;
+                    }
+                },
             ],
         });
 
@@ -160,7 +164,6 @@
         table.clearFilter();
         var limite = luxon.DateTime.now().minus({days: dias});
         table.setFilter(function(row){
-            // Converte o formato BR do CSV para comparação
             var d = luxon.DateTime.fromFormat(row.data_criacao, "dd/MM/yyyy");
             return d >= limite;
         });
@@ -169,7 +172,6 @@
     function filterDataEspecifica(valor) {
         if(!valor) return;
         table.clearFilter();
-        // Converte o valor do calendário (AAAA-MM-DD) para BR (DD/MM/AAAA) para o filtro bater
         var dataBR = luxon.DateTime.fromISO(valor).toFormat('dd/MM/yyyy');
         table.addFilter("data_criacao", "like", dataBR);
     }
