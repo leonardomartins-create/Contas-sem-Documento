@@ -74,7 +74,7 @@
 
 <div class="footer-stats">
     <div class="stat-item">
-        <i class="fa-solid fa-users"></i> TOTAL FILTRADO: <span id="total-count" class="stat-value">...</span>
+        <i class="fa-solid fa-users"></i> <b>TOTAL NA PLANILHA:</b> <span id="total-count" class="stat-value">...</span>
     </div>
 </div>
 
@@ -86,6 +86,8 @@
         header: true,
         skipEmptyLines: true,
         complete: function(results) {
+            // AQUI É O PULO DO GATO: Já conta direto no carregamento
+            document.getElementById("total-count").innerText = results.data.length;
             renderTable(results.data);
         }
     });
@@ -98,66 +100,9 @@
             pagination: "local",
             paginationSize: 50,
             initialSort:[{column:"data_criacao", dir:"desc"}],
-            // Esse evento dispara quando a filtragem termina
-            dataFiltered: function() { updateCounter(); },
-            // Esse evento dispara quando os dados são carregados
-            dataLoaded: function() { updateCounter(); },
             columns: [
                 {title: "ID CLIENTE", field: "customer_id", width: 140, fontWeight: "bold"},
                 {title: "ABERTURA", field: "data_criacao", width: 160, sorter: "date", sorterParams: { format: "dd/MM/yyyy" }},
                 {title: "NATUREZA", field: "natureza_juridica", width: 150},
                 {title: "SALDO", field: "saldo", hozAlign: "right", formatter: function(cell){
                     var num = parseFloat(String(cell.getValue()).replace(/[^\d.-]/g, '')) || 0;
-                    return "R$ " + num.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-                }},
-                {title: "PERFIL", field: "link_customer", hozAlign: "center", formatter: function(cell){
-                    return `<a href="${cell.getValue()}" target="_blank" class="link-btn">ABRIR</a>`;
-                }},
-                {title: "DOCS", field: "link_documento", hozAlign: "center", formatter: function(cell){
-                    return `<a href="${cell.getValue()}" target="_blank" class="link-btn" style="color:var(--verde-asaas)">DOCS</a>`;
-                }}
-            ],
-        });
-
-        document.getElementById("search-input").addEventListener("input", function(e){
-            table.setFilter("customer_id", "like", e.target.value);
-        });
-    }
-
-    function updateCounter() {
-        // Pequeno delay para garantir que o Tabulator terminou o cálculo
-        setTimeout(function(){
-            if(table) {
-                var count = table.getDataCount("active");
-                document.getElementById("total-count").innerText = count;
-            }
-        }, 100);
-    }
-
-    function filterSaldo(min, btn) {
-        document.querySelectorAll(".btn-saldo").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        table.clearFilter();
-        if(min > 0) {
-            table.setFilter(data => (parseFloat(String(data.saldo).replace(/[^\d.-]/g, '')) || 0) >= min);
-        }
-    }
-
-    function filterPeriodo() {
-        var from = document.getElementById("date-from").value;
-        var to = document.getElementById("date-to").value;
-        table.clearFilter();
-        table.setFilter(row => {
-            var d = luxon.DateTime.fromFormat(row.data_criacao, "dd/MM/yyyy");
-            var f = from ? luxon.DateTime.fromISO(from) : null;
-            var t = to ? luxon.DateTime.fromISO(to) : null;
-            return (!f || d >= f) && (!t || d <= t);
-        });
-    }
-
-    function clearFilters() {
-        location.reload();
-    }
-</script>
-</body>
-</html>
