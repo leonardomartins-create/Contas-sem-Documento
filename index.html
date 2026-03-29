@@ -9,9 +9,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_modern.min.css" rel="stylesheet">
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.4/luxon.min.js"></script>
     <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.4/luxon.min.js"></script>
 
     <style>
         :root { --azul-asaas: #0030b9; --azul-claro: #0198ff; --cinza-bg: #f1f5fb; --verde-asaas: #8ebf30; --rosa-asaas: #ff365e; --azul-escuro: #001074; }
@@ -27,26 +27,9 @@
         button.active { background: var(--azul-asaas); color: white; border-color: var(--azul-asaas); }
         input { width: 100%; padding: 10px; border: 1px solid #e0e6ed; border-radius: 6px; font-family: 'Montserrat'; box-sizing: border-box; font-size: 12px; }
         .date-range { display: flex; gap: 10px; align-items: center; }
-        .link-btn { text-decoration: none; color: var(--azul-asaas); font-weight: 700; font-size: 11px; }
-        .high-balance { color: var(--rosa-asaas) !important; font-weight: 800 !important; }
-
-        /* NOVO: Estilo do Rodapé de Totais */
-        .footer-stats {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: var(--azul-escuro);
-            color: white;
-            padding: 15px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
-            z-index: 1000;
-        }
-        .stat-item { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+        .footer-stats { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--azul-escuro); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; }
         .stat-value { font-size: 20px; color: var(--verde-asaas); font-weight: 800; }
+        .link-btn { text-decoration: none; color: var(--azul-asaas); font-weight: 700; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -80,8 +63,95 @@
         </div>
 
         <div class="filter-card">
-            <label><i class="fa-solid fa-magnifying-glass"></i> Busca Rápida</label>
+            <label><i class="fa-solid fa-magnifying-glass"></i> Busca ID</label>
             <input type="text" id="search-input" placeholder="Digite o ID do cliente...">
             <button onclick="clearFilters()" style="margin-top:10px; width:100%; border-style: dashed; color: var(--rosa-asaas);">Limpar Tudo</button>
         </div>
     </div>
+
+    <div id="table-container"></div>
+</div>
+
+<div class="footer-stats">
+    <div class="stat-item">
+        <i class="fa-solid fa-users"></i> TOTAL: <span id="total-count" class="stat-value">0</span>
+    </div>
+</div>
+
+<script>
+    var table;
+    
+    // Tenta carregar o CSV
+    Papa.parse("dados.csv", {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        error: function(err) { console.error("Erro ao carregar CSV:", err); },
+        complete: function(results) {
+            console.log("Dados carregados:", results.data.length);
+            renderTable(results.data);
+        }
+    });
+
+    function renderTable(data) {
+        table = new Tabulator("#table-container", {
+            data: data,
+            layout: "fitColumns",
+            height: "500px",
+            pagination: "local",
+            paginationSize: 50,
+            initialSort:[{column:"data_criacao", dir:"desc"}],
+            dataProcessed: function() { updateCounter(); },
+            columns: [
+                {title: "ID CLIENTE", field: "customer_id", width: 140, fontWeight: "bold"},
+                {title: "ABERTURA", field: "data_criacao", width: 160, sorter: "date", sorterParams: { format: "dd/MM/yyyy" }},
+                {title: "NATUREZA", field: "natureza_juridica", width: 150},
+                {title: "SALDO", field: "saldo", hozAlign: "right", formatter: function(cell){
+                    var num = parseFloat(String(cell.getValue()).replace(/[^\d.-]/g, '')) || 0;
+                    return "R$ " + num.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                }},
+                {title: "PERFIL", field: "link_customer", hozAlign: "center", formatter: function(cell){
+                    return `<a href="${cell.getValue()}" target="_blank" class="link-btn">ABRIR</a>`;
+                }},
+                {title: "DOCS", field: "link_documento", hozAlign: "center", formatter: function(cell){
+                    return `<a href="${cell.getValue()}" target="_blank" class="link-btn" style="color:var(--verde-asaas)">DOCS</a>`;
+                }}
+            ],
+        });
+
+        document.getElementById("search-input").addEventListener("keyup", function(e){
+            table.setFilter("customer_id", "like", e.target.value);
+        });
+    }
+
+    function updateCounter() {
+        if(table) document.getElementById("total-count").innerText = table.getDataCount("active");
+    }
+
+    function filterSaldo(min, btn) {
+        document.querySelectorAll(".btn-saldo").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        table.clearFilter();
+        if(min > 0) {
+            table.setFilter(data => (parseFloat(String(data.saldo).replace(/[^\d.-]/g, '')) || 0) >= min);
+        }
+    }
+
+    function filterPeriodo() {
+        var from = document.getElementById("date-from").value;
+        var to = document.getElementById("date-to").value;
+        table.clearFilter();
+        table.setFilter(row => {
+            var d = luxon.DateTime.fromFormat(row.data_criacao, "dd/MM/yyyy");
+            var f = from ? luxon.DateTime.fromISO(from) : null;
+            var t = to ? luxon.DateTime.fromISO(to) : null;
+            return (!f || d >= f) && (!t || d <= t);
+        });
+    }
+
+    function clearFilters() {
+        location.reload(); // Forma mais segura de limpar tudo e recarregar os dados
+    }
+</script>
+</body>
+</html>
