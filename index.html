@@ -25,7 +25,7 @@
         
         body { font-family: 'Montserrat', sans-serif; background-color: var(--cinza-bg); margin: 0; padding-bottom: 80px; color: var(--azul-escuro); }
         
-        /* Navbar com Logo Corrigida */
+        /* Navbar com Logo Local */
         .navbar { background: white; padding: 15px 40px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .navbar img { height: 35px; width: auto; }
         
@@ -41,7 +41,6 @@
         input { width: 100%; padding: 10px; border: 1px solid #e0e6ed; border-radius: 6px; font-family: 'Montserrat'; box-sizing: border-box; font-size: 12px; }
         .date-range { display: flex; gap: 10px; align-items: center; }
         
-        /* Estilo da Tabela */
         .tabulator-row { background: white !important; margin-bottom: 5px !important; border-radius: 8px !important; border: 1px solid #e0e6ed !important; }
         .link-btn { text-decoration: none; color: var(--azul-asaas); font-weight: 700; font-size: 11px; }
         .high-balance { color: var(--rosa-asaas) !important; font-weight: 800 !important; }
@@ -54,7 +53,7 @@
 <body>
 
 <div class="navbar">
-    <img src="https://www.asaas.com/assets/logo-asaas-azul.png" alt="Asaas Logo">
+    <img src="logo-asaas-azul.png" alt="Asaas Logo">
     <div style="font-size: 12px; font-weight: 600; color: var(--azul-claro);">ANALISE & PREVENÇÃO</div>
 </div>
 
@@ -94,22 +93,19 @@
 <div class="footer-stats">
     <div>
         <i class="fa-solid fa-users"></i> 
-        <b>TOTAL NA PLANILHA:</b> <span id="total-count" class="stat-value">0</span>
+        <b>TOTAL NA PLANILHA:</b> <span id="total-count" class="stat-value">...</span>
     </div>
 </div>
 
 <script>
     var table;
     
-    // Carregamento via URL Raw do GitHub para evitar bloqueios
-    const csvUrl = "https://raw.githubusercontent.com/leonardomartins-create/Contas-sem-Documento/main/dados.csv";
-
-    Papa.parse(csvUrl, {
+    // Caminho relativo para o CSV na mesma pasta
+    Papa.parse("dados.csv", {
         download: true,
         header: true,
         skipEmptyLines: true,
         complete: function(results) {
-            // Conta os cadastros assim que o CSV é lido
             document.getElementById("total-count").innerText = results.data.length;
             renderTable(results.data);
         }
@@ -148,13 +144,11 @@
             ],
         });
 
-        // Filtro de busca por ID
         document.getElementById("search-input").addEventListener("input", function(e){
             table.setFilter("customer_id", "like", e.target.value);
         });
     }
 
-    // Filtro de botões de saldo
     function filterSaldo(min, btn) {
         document.querySelectorAll(".btn-saldo").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
@@ -164,11 +158,9 @@
         }
     }
 
-    // Filtro de período de data
     function filterPeriodo() {
         var from = document.getElementById("date-from").value;
         var to = document.getElementById("date-to").value;
-        
         table.clearFilter();
         table.setFilter(row => {
             if(!row.data_criacao) return false;
@@ -178,7 +170,6 @@
             return (!f || dataRow >= f) && (!t || dataRow <= t);
         });
     }
-
 </script>
 </body>
 </html>
