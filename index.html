@@ -7,28 +7,48 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_modern.min.css" rel="stylesheet">
     
+    <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_modern.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.4/luxon.min.js"></script>
     <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 
     <style>
-        :root { --azul-asaas: #0030b9; --azul-claro: #0198ff; --cinza-bg: #f1f5fb; --verde-asaas: #8ebf30; --rosa-asaas: #ff365e; --azul-escuro: #001074; }
+        :root { 
+            --azul-asaas: #0030b9; 
+            --azul-claro: #0198ff; 
+            --cinza-bg: #f1f5fb; 
+            --verde-asaas: #8ebf30; 
+            --rosa-asaas: #ff365e; 
+            --azul-escuro: #001074; 
+        }
+        
         body { font-family: 'Montserrat', sans-serif; background-color: var(--cinza-bg); margin: 0; padding-bottom: 80px; color: var(--azul-escuro); }
+        
+        /* Navbar com Logo Corrigida */
         .navbar { background: white; padding: 15px 40px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .navbar img { height: 35px; }
+        .navbar img { height: 35px; width: auto; }
+        
         .container { padding: 30px 40px; }
         .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .filter-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e0e6ed; }
         .filter-card label { display: block; font-weight: 700; font-size: 11px; text-transform: uppercase; margin-bottom: 15px; color: var(--azul-claro); }
+        
         .btn-group { display: flex; flex-wrap: wrap; gap: 8px; }
         button { border: 1px solid #e0e6ed; background: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-family: 'Montserrat'; font-size: 12px; font-weight: 600; transition: 0.2s; }
         button.active { background: var(--azul-asaas); color: white; border-color: var(--azul-asaas); }
+        
         input { width: 100%; padding: 10px; border: 1px solid #e0e6ed; border-radius: 6px; font-family: 'Montserrat'; box-sizing: border-box; font-size: 12px; }
-        .footer-stats { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--azul-escuro); color: white; padding: 15px 40px; display: flex; align-items: center; z-index: 1000; }
-        .stat-value { font-size: 20px; color: var(--verde-asaas); font-weight: 800; margin-left: 10px; }
+        .date-range { display: flex; gap: 10px; align-items: center; }
+        
+        /* Estilo da Tabela */
+        .tabulator-row { background: white !important; margin-bottom: 5px !important; border-radius: 8px !important; border: 1px solid #e0e6ed !important; }
         .link-btn { text-decoration: none; color: var(--azul-asaas); font-weight: 700; font-size: 11px; }
+        .high-balance { color: var(--rosa-asaas) !important; font-weight: 800 !important; }
+
+        /* Rodapé Fixo */
+        .footer-stats { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--azul-escuro); color: white; padding: 15px 40px; display: flex; align-items: center; z-index: 1000; box-sizing: border-box;}
+        .stat-value { font-size: 20px; color: var(--verde-asaas); font-weight: 800; margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -41,11 +61,7 @@
 <div class="container">
     <div class="header-title"><h2>🚀 KYC - Contas sem Documento</h2></div>
 
-    <div id="loading-msg" style="text-align: center; padding: 20px; font-weight: bold; color: var(--azul-asaas);">
-        ⏳ Carregando dados da planilha...
-    </div>
-
-    <div class="filter-grid" id="filters" style="display: none;">
+    <div class="filter-grid">
         <div class="filter-card">
             <label><i class="fa-solid fa-wallet"></i> Faixa de Saldo</label>
             <div class="btn-group">
@@ -58,16 +74,17 @@
 
         <div class="filter-card">
             <label><i class="fa-solid fa-calendar-days"></i> Período Específico</label>
-            <div style="display: flex; gap: 5px; align-items: center;">
+            <div class="date-range">
                 <input type="date" id="date-from" onchange="filterPeriodo()">
+                <span style="font-size: 10px; font-weight: bold; color: #ccc;">ATÉ</span>
                 <input type="date" id="date-to" onchange="filterPeriodo()">
             </div>
         </div>
 
         <div class="filter-card">
             <label><i class="fa-solid fa-magnifying-glass"></i> Busca Rápida</label>
-            <input type="text" id="search-input" placeholder="Digite o ID...">
-            <button onclick="location.reload()" style="margin-top:10px; width:100%; border-style: dashed;">Limpar Tudo</button>
+            <input type="text" id="search-input" placeholder="Digite o ID do cliente...">
+            <button onclick="location.reload()" style="margin-top:10px; width:100%; border-style: dashed; color: var(--rosa-asaas);">Limpar Tudo / Recarregar</button>
         </div>
     </div>
 
@@ -75,12 +92,16 @@
 </div>
 
 <div class="footer-stats">
-    <div><i class="fa-solid fa-users"></i> TOTAL NA PLANILHA: <span id="total-count" class="stat-value">...</span></div>
+    <div>
+        <i class="fa-solid fa-users"></i> 
+        <b>TOTAL NA PLANILHA:</b> <span id="total-count" class="stat-value">0</span>
+    </div>
 </div>
 
 <script>
     var table;
-    // URL RAW DO SEU GITHUB (Isso evita erro de carregamento local)
+    
+    // Carregamento via URL Raw do GitHub para evitar bloqueios
     const csvUrl = "https://raw.githubusercontent.com/leonardomartins-create/Contas-sem-Documento/main/dados.csv";
 
     Papa.parse(csvUrl, {
@@ -88,14 +109,9 @@
         header: true,
         skipEmptyLines: true,
         complete: function(results) {
-            console.log("Sucesso!", results.data.length);
+            // Conta os cadastros assim que o CSV é lido
             document.getElementById("total-count").innerText = results.data.length;
-            document.getElementById("loading-msg").style.display = "none";
-            document.getElementById("filters").style.display = "grid";
             renderTable(results.data);
-        },
-        error: function(err) {
-            document.getElementById("loading-msg").innerHTML = "❌ Erro ao carregar arquivo. Verifique se o arquivo 'dados.csv' está no GitHub.";
         }
     });
 
@@ -108,39 +124,61 @@
             paginationSize: 50,
             initialSort:[{column:"data_criacao", dir:"desc"}],
             columns: [
-                {title: "ID", field: "customer_id", width: 100},
-                {title: "ABERTURA", field: "data_criacao", width: 130, sorter: "date", sorterParams: { format: "dd/MM/yyyy" }},
-                {title: "NATUREZA", field: "natureza_juridica", width: 120},
-                {title: "SALDO", field: "saldo", hozAlign: "right", formatter: function(cell){
-                    var n = parseFloat(String(cell.getValue()).replace(/[^\d.-]/g, '')) || 0;
-                    return "R$ " + n.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                {title: "ID CLIENTE", field: "customer_id", width: 140, fontWeight: "bold"},
+                {
+                    title: "ABERTURA", 
+                    field: "data_criacao", 
+                    width: 160, 
+                    sorter: "date", 
+                    sorterParams: { format: "dd/MM/yyyy" }
+                },
+                {title: "NATUREZA", field: "natureza_juridica", width: 150},
+                {title: "SALDO", field: "saldo", hozAlign: "right", fontWeight: "700", formatter: function(cell){
+                    var val = cell.getValue();
+                    var num = parseFloat(String(val).replace(/[^\d.-]/g, '')) || 0;
+                    var formatted = "R$ " + num.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                    return num >= 50000 ? `<span class="high-balance">${formatted}</span>` : formatted;
                 }},
-                {title: "PERFIL", field: "link_customer", formatter: c => `<a href="${c.getValue()}" target="_blank" class="link-btn">ABRIR</a>`},
-                {title: "DOCS", field: "link_documento", formatter: c => `<a href="${c.getValue()}" target="_blank" class="link-btn" style="color:var(--verde-asaas)">DOCS</a>`}
-            ]
+                {title: "PERFIL", field: "link_customer", hozAlign: "center", formatter: function(cell){
+                    return `<a href="${cell.getValue()}" target="_blank" class="link-btn"><i class="fa-solid fa-user-gear"></i> ABRIR</a>`;
+                }},
+                {title: "DOCS", field: "link_documento", hozAlign: "center", formatter: function(cell){
+                    return `<a href="${cell.getValue()}" target="_blank" class="link-btn" style="color:var(--verde-asaas)"><i class="fa-solid fa-file-shield"></i> DOCS</a>`;
+                }},
+            ],
         });
 
-        document.getElementById("search-input").addEventListener("input", e => table.setFilter("customer_id", "like", e.target.value));
+        // Filtro de busca por ID
+        document.getElementById("search-input").addEventListener("input", function(e){
+            table.setFilter("customer_id", "like", e.target.value);
+        });
     }
 
+    // Filtro de botões de saldo
     function filterSaldo(min, btn) {
         document.querySelectorAll(".btn-saldo").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         table.clearFilter();
-        if(min > 0) table.setFilter(d => (parseFloat(String(d.saldo).replace(/[^\d.-]/g, '')) || 0) >= min);
+        if(min > 0) {
+            table.setFilter(data => (parseFloat(String(data.saldo).replace(/[^\d.-]/g, '')) || 0) >= min);
+        }
     }
 
+    // Filtro de período de data
     function filterPeriodo() {
-        var f = document.getElementById("date-from").value;
-        var t = document.getElementById("date-to").value;
+        var from = document.getElementById("date-from").value;
+        var to = document.getElementById("date-to").value;
+        
         table.clearFilter();
         table.setFilter(row => {
-            var d = luxon.DateTime.fromFormat(row.data_criacao, "dd/MM/yyyy");
-            var dF = f ? luxon.DateTime.fromISO(f) : null;
-            var dT = t ? luxon.DateTime.fromISO(t) : null;
-            return (!dF || d >= dF) && (!dT || d <= dT);
+            if(!row.data_criacao) return false;
+            var dataRow = luxon.DateTime.fromFormat(row.data_criacao, "dd/MM/yyyy");
+            var f = from ? luxon.DateTime.fromISO(from) : null;
+            var t = to ? luxon.DateTime.fromISO(to) : null;
+            return (!f || dataRow >= f) && (!t || dataRow <= t);
         });
     }
+
 </script>
 </body>
 </html>
