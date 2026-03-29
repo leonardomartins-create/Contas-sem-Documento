@@ -63,7 +63,7 @@
         </div>
 
         <div class="filter-card">
-            <label><i class="fa-solid fa-magnifying-glass"></i> Busca ID</label>
+            <label><i class="fa-solid fa-magnifying-glass"></i> Busca Rápida</label>
             <input type="text" id="search-input" placeholder="Digite o ID do cliente...">
             <button onclick="clearFilters()" style="margin-top:10px; width:100%; border-style: dashed; color: var(--rosa-asaas);">Limpar Tudo</button>
         </div>
@@ -74,21 +74,18 @@
 
 <div class="footer-stats">
     <div class="stat-item">
-        <i class="fa-solid fa-users"></i> TOTAL: <span id="total-count" class="stat-value">0</span>
+        <i class="fa-solid fa-users"></i> TOTAL FILTRADO: <span id="total-count" class="stat-value">...</span>
     </div>
 </div>
 
 <script>
     var table;
     
-    // Tenta carregar o CSV
     Papa.parse("dados.csv", {
         download: true,
         header: true,
         skipEmptyLines: true,
-        error: function(err) { console.error("Erro ao carregar CSV:", err); },
         complete: function(results) {
-            console.log("Dados carregados:", results.data.length);
             renderTable(results.data);
         }
     });
@@ -101,7 +98,10 @@
             pagination: "local",
             paginationSize: 50,
             initialSort:[{column:"data_criacao", dir:"desc"}],
-            dataProcessed: function() { updateCounter(); },
+            // Esse evento dispara quando a filtragem termina
+            dataFiltered: function() { updateCounter(); },
+            // Esse evento dispara quando os dados são carregados
+            dataLoaded: function() { updateCounter(); },
             columns: [
                 {title: "ID CLIENTE", field: "customer_id", width: 140, fontWeight: "bold"},
                 {title: "ABERTURA", field: "data_criacao", width: 160, sorter: "date", sorterParams: { format: "dd/MM/yyyy" }},
@@ -119,13 +119,19 @@
             ],
         });
 
-        document.getElementById("search-input").addEventListener("keyup", function(e){
+        document.getElementById("search-input").addEventListener("input", function(e){
             table.setFilter("customer_id", "like", e.target.value);
         });
     }
 
     function updateCounter() {
-        if(table) document.getElementById("total-count").innerText = table.getDataCount("active");
+        // Pequeno delay para garantir que o Tabulator terminou o cálculo
+        setTimeout(function(){
+            if(table) {
+                var count = table.getDataCount("active");
+                document.getElementById("total-count").innerText = count;
+            }
+        }, 100);
     }
 
     function filterSaldo(min, btn) {
@@ -150,7 +156,7 @@
     }
 
     function clearFilters() {
-        location.reload(); // Forma mais segura de limpar tudo e recarregar os dados
+        location.reload();
     }
 </script>
 </body>
