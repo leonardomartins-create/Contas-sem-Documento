@@ -26,9 +26,8 @@
         button { border: 1px solid #e0e6ed; background: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-family: 'Montserrat'; font-size: 12px; font-weight: 600; transition: 0.2s; }
         button.active { background: var(--azul-asaas); color: white; border-color: var(--azul-asaas); }
         input { width: 100%; padding: 10px; border: 1px solid #e0e6ed; border-radius: 6px; font-family: 'Montserrat'; box-sizing: border-box; font-size: 12px; }
-        .date-range { display: flex; gap: 10px; align-items: center; }
-        .footer-stats { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--azul-escuro); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; }
-        .stat-value { font-size: 20px; color: var(--verde-asaas); font-weight: 800; }
+        .footer-stats { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--azul-escuro); color: white; padding: 15px 40px; display: flex; align-items: center; z-index: 1000; }
+        .stat-value { font-size: 20px; color: var(--verde-asaas); font-weight: 800; margin-left: 10px; }
         .link-btn { text-decoration: none; color: var(--azul-asaas); font-weight: 700; font-size: 11px; }
     </style>
 </head>
@@ -42,7 +41,11 @@
 <div class="container">
     <div class="header-title"><h2>🚀 KYC - Contas sem Documento</h2></div>
 
-    <div class="filter-grid">
+    <div id="loading-msg" style="text-align: center; padding: 20px; font-weight: bold; color: var(--azul-asaas);">
+        ⏳ Carregando dados da planilha...
+    </div>
+
+    <div class="filter-grid" id="filters" style="display: none;">
         <div class="filter-card">
             <label><i class="fa-solid fa-wallet"></i> Faixa de Saldo</label>
             <div class="btn-group">
@@ -55,17 +58,16 @@
 
         <div class="filter-card">
             <label><i class="fa-solid fa-calendar-days"></i> Período Específico</label>
-            <div class="date-range">
+            <div style="display: flex; gap: 5px; align-items: center;">
                 <input type="date" id="date-from" onchange="filterPeriodo()">
-                <span style="font-size: 10px; font-weight: bold; color: #ccc;">ATÉ</span>
                 <input type="date" id="date-to" onchange="filterPeriodo()">
             </div>
         </div>
 
         <div class="filter-card">
             <label><i class="fa-solid fa-magnifying-glass"></i> Busca Rápida</label>
-            <input type="text" id="search-input" placeholder="Digite o ID do cliente...">
-            <button onclick="clearFilters()" style="margin-top:10px; width:100%; border-style: dashed; color: var(--rosa-asaas);">Limpar Tudo</button>
+            <input type="text" id="search-input" placeholder="Digite o ID...">
+            <button onclick="location.reload()" style="margin-top:10px; width:100%; border-style: dashed;">Limpar Tudo</button>
         </div>
     </div>
 
@@ -73,22 +75,27 @@
 </div>
 
 <div class="footer-stats">
-    <div class="stat-item">
-        <i class="fa-solid fa-users"></i> <b>TOTAL NA PLANILHA:</b> <span id="total-count" class="stat-value">...</span>
-    </div>
+    <div><i class="fa-solid fa-users"></i> TOTAL NA PLANILHA: <span id="total-count" class="stat-value">...</span></div>
 </div>
 
 <script>
     var table;
-    
-    Papa.parse("dados.csv", {
+    // URL RAW DO SEU GITHUB (Isso evita erro de carregamento local)
+    const csvUrl = "https://raw.githubusercontent.com/leonardomartins-create/Contas-sem-Documento/main/dados.csv";
+
+    Papa.parse(csvUrl, {
         download: true,
         header: true,
         skipEmptyLines: true,
         complete: function(results) {
-            // AQUI É O PULO DO GATO: Já conta direto no carregamento
+            console.log("Sucesso!", results.data.length);
             document.getElementById("total-count").innerText = results.data.length;
+            document.getElementById("loading-msg").style.display = "none";
+            document.getElementById("filters").style.display = "grid";
             renderTable(results.data);
+        },
+        error: function(err) {
+            document.getElementById("loading-msg").innerHTML = "❌ Erro ao carregar arquivo. Verifique se o arquivo 'dados.csv' está no GitHub.";
         }
     });
 
@@ -101,8 +108,39 @@
             paginationSize: 50,
             initialSort:[{column:"data_criacao", dir:"desc"}],
             columns: [
-                {title: "ID CLIENTE", field: "customer_id", width: 140, fontWeight: "bold"},
-                {title: "ABERTURA", field: "data_criacao", width: 160, sorter: "date", sorterParams: { format: "dd/MM/yyyy" }},
-                {title: "NATUREZA", field: "natureza_juridica", width: 150},
+                {title: "ID", field: "customer_id", width: 100},
+                {title: "ABERTURA", field: "data_criacao", width: 130, sorter: "date", sorterParams: { format: "dd/MM/yyyy" }},
+                {title: "NATUREZA", field: "natureza_juridica", width: 120},
                 {title: "SALDO", field: "saldo", hozAlign: "right", formatter: function(cell){
-                    var num = parseFloat(String(cell.getValue()).replace(/[^\d.-]/g, '')) || 0;
+                    var n = parseFloat(String(cell.getValue()).replace(/[^\d.-]/g, '')) || 0;
+                    return "R$ " + n.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                }},
+                {title: "PERFIL", field: "link_customer", formatter: c => `<a href="${c.getValue()}" target="_blank" class="link-btn">ABRIR</a>`},
+                {title: "DOCS", field: "link_documento", formatter: c => `<a href="${c.getValue()}" target="_blank" class="link-btn" style="color:var(--verde-asaas)">DOCS</a>`}
+            ]
+        });
+
+        document.getElementById("search-input").addEventListener("input", e => table.setFilter("customer_id", "like", e.target.value));
+    }
+
+    function filterSaldo(min, btn) {
+        document.querySelectorAll(".btn-saldo").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        table.clearFilter();
+        if(min > 0) table.setFilter(d => (parseFloat(String(d.saldo).replace(/[^\d.-]/g, '')) || 0) >= min);
+    }
+
+    function filterPeriodo() {
+        var f = document.getElementById("date-from").value;
+        var t = document.getElementById("date-to").value;
+        table.clearFilter();
+        table.setFilter(row => {
+            var d = luxon.DateTime.fromFormat(row.data_criacao, "dd/MM/yyyy");
+            var dF = f ? luxon.DateTime.fromISO(f) : null;
+            var dT = t ? luxon.DateTime.fromISO(t) : null;
+            return (!dF || d >= dF) && (!dT || d <= dT);
+        });
+    }
+</script>
+</body>
+</html>
