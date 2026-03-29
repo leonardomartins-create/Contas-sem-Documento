@@ -27,13 +27,18 @@
         .navbar { background: white; padding: 15px 40px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .navbar img { height: 35px; width: auto; display: block; }
         .container { padding: 30px 40px; }
-        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .filter-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e0e6ed; }
         .filter-card label { display: block; font-weight: 700; font-size: 11px; text-transform: uppercase; margin-bottom: 15px; color: var(--azul-claro); }
         .btn-group { display: flex; flex-wrap: wrap; gap: 8px; }
         button { border: 1px solid #e0e6ed; background: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-family: 'Montserrat'; font-size: 12px; font-weight: 600; transition: 0.2s; }
         button.active { background: var(--azul-asaas); color: white; border-color: var(--azul-asaas); }
-        input { width: 100%; padding: 10px; border: 1px solid #e0e6ed; border-radius: 6px; font-family: 'Montserrat'; box-sizing: border-box; }
+        input { width: 100%; padding: 10px; border: 1px solid #e0e6ed; border-radius: 6px; font-family: 'Montserrat'; box-sizing: border-box; font-size: 12px; }
+        
+        /* Ajuste para o calendário lado a lado */
+        .date-range { display: flex; gap: 10px; align-items: center; }
+        .date-range input { flex: 1; }
+
         .tabulator { border: none !important; background-color: transparent !important; }
         .tabulator-header { background: transparent !important; color: var(--azul-claro) !important; font-weight: 700 !important; font-size: 11px; text-transform: uppercase; }
         .tabulator-row { background: white !important; margin-bottom: 5px !important; border-radius: 8px !important; border: 1px solid #e0e6ed !important; }
@@ -63,19 +68,22 @@
         </div>
 
         <div class="filter-card">
-            <label><i class="fa-solid fa-calendar-days"></i> Período de Abertura</label>
-            <div class="btn-group" style="margin-bottom: 10px;">
-                <button class="btn-data" onclick="filterData(15, this)">15d</button>
-                <button class="btn-data" onclick="filterData(20, this)">20d</button>
-                <button class="btn-data" onclick="filterData(30, this)">30d</button>
+            <label><i class="fa-solid fa-calendar-days"></i> Período Específico (Abertura)</label>
+            <div class="date-range">
+                <input type="date" id="date-from" onchange="filterPeriodo()">
+                <span style="font-size: 10px; font-weight: bold; color: #ccc;">ATÉ</span>
+                <input type="date" id="date-to" onchange="filterPeriodo()">
             </div>
-            <input type="date" id="date-picker" onchange="filterDataEspecifica(this.value)">
+            <div class="btn-group" style="margin-top: 10px;">
+                <button class="btn-data" onclick="filterDataRapida(15, this)">15d</button>
+                <button class="btn-data" onclick="filterDataRapida(30, this)">30d</button>
+            </div>
         </div>
 
         <div class="filter-card">
             <label><i class="fa-solid fa-magnifying-glass"></i> Busca Rápida</label>
             <input type="text" id="search-input" placeholder="Digite o ID do cliente...">
-            <button onclick="clearFilters()" style="margin-top:10px; width:100%; border-style: dashed;">Limpar Tudo</button>
+            <button onclick="clearFilters()" style="margin-top:10px; width:100%; border-style: dashed; color: var(--rosa-asaas);">Limpar Tudo</button>
         </div>
     </div>
 
@@ -85,7 +93,8 @@
 <script>
     var table;
 
-    Papa.parse("https://raw.githubusercontent.com/leonardomartins-create/Contas-sem-Documento/main/dados.csv", {
+    // Carregamento do CSV (URL RAW do seu GitHub)
+    Papa.parse("dados.csv", {
         download: true,
         header: true,
         skipEmptyLines: true,
@@ -101,9 +110,7 @@
             height: "600px",
             pagination: "local",
             paginationSize: 50,
-            initialSort:[
-                {column:"data_criacao", dir:"desc"},
-            ],
+            initialSort:[{column:"data_criacao", dir:"desc"}],
             columns: [
                 {title: "ID CLIENTE", field: "customer_id", width: 140, fontWeight: "bold"},
                 {
@@ -122,22 +129,12 @@
                     var formatted = "R$ " + num.toLocaleString('pt-BR', {minimumFractionDigits: 2});
                     return num > 50000 ? `<span class="high-balance">${formatted}</span>` : formatted;
                 }},
-                {
-                    title: "PERFIL ASAAS", 
-                    field: "link_customer", 
-                    hozAlign: "center", 
-                    formatter: function(cell){
-                        return `<a href="${cell.getValue()}" target="_blank" class="link-btn"><i class="fa-solid fa-user-gear"></i> PERFIL</a>`;
-                    }
-                },
-                {
-                    title: "ANÁLISE DOCS", 
-                    field: "link_documento", 
-                    hozAlign: "center", 
-                    formatter: function(cell){
-                        return `<a href="${cell.getValue()}" target="_blank" class="link-btn" style="color: var(--verde-asaas)"><i class="fa-solid fa-file-shield"></i> DOCS</a>`;
-                    }
-                },
+                {title: "PERFIL ASAAS", field: "link_customer", hozAlign: "center", formatter: function(cell){
+                    return `<a href="${cell.getValue()}" target="_blank" class="link-btn"><i class="fa-solid fa-user-gear"></i> PERFIL</a>`;
+                }},
+                {title: "ANÁLISE DOCS", field: "link_documento", hozAlign: "center", formatter: function(cell){
+                    return `<a href="${cell.getValue()}" target="_blank" class="link-btn" style="color: var(--verde-asaas)"><i class="fa-solid fa-file-shield"></i> DOCS</a>`;
+                }},
             ],
         });
 
@@ -146,6 +143,7 @@
         });
     }
 
+    // Filtro de Saldo
     function filterSaldo(min, btn) {
         document.querySelectorAll(".btn-saldo").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
@@ -158,31 +156,19 @@
         }
     }
 
-    function filterData(dias, btn) {
+    // Filtro de Período Customizado (De/Até)
+    function filterPeriodo() {
+        var from = document.getElementById("date-from").value;
+        var to = document.getElementById("date-to").value;
+        
+        table.clearFilter();
         document.querySelectorAll(".btn-data").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        table.clearFilter();
-        var limite = luxon.DateTime.now().minus({days: dias});
+
         table.setFilter(function(row){
-            var d = luxon.DateTime.fromFormat(row.data_criacao, "dd/MM/yyyy");
-            return d >= limite;
-        });
-    }
-
-    function filterDataEspecifica(valor) {
-        if(!valor) return;
-        table.clearFilter();
-        var dataBR = luxon.DateTime.fromISO(valor).toFormat('dd/MM/yyyy');
-        table.addFilter("data_criacao", "like", dataBR);
-    }
-
-    function clearFilters() {
-        table.clearFilter();
-        document.querySelectorAll("button").forEach(b => b.classList.remove("active"));
-        document.querySelector(".btn-saldo").classList.add("active");
-        document.getElementById("search-input").value = "";
-        document.getElementById("date-picker").value = "";
-    }
-</script>
-</body>
-</html>
+            if(!row.data_criacao) return false;
+            
+            // Converte data do CSV (DD/MM/AAAA) para Luxon
+            var dataRow = luxon.DateTime.fromFormat(row.data_criacao, "dd/MM/yyyy");
+            
+            var matchFrom = from ? dataRow >= luxon.DateTime.fromISO(from) : true;
+            var matchTo = to
